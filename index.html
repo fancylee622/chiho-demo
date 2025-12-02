@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Jume - 现代多语言网站</title>
+    <!-- 引入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Inter 字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <!-- 引入 React, ReactDOM 和 Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        /* 确保页面使用 Inter 字体 */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        /* 确保页面内容全屏显示 */
+        #root {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useMemo } = React;
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+
+        // --- 0. Icon Components (Replacing lucide-react for single-file stability) ---
+
+        // Helper for consistent icon style
+        const iconProps = { 
+            stroke: "currentColor", 
+            strokeWidth: "2", 
+            strokeLinecap: "round", 
+            strokeLinejoin: "round", 
+            fill: "none", 
+            width: "24", 
+            height: "24", 
+            viewBox: "0 0 24 24" 
+        };
+
+        const Menu = (props) => <svg {...iconProps} {...props}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>;
+        const X = (props) => <svg {...iconProps} {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+        const Globe = (props) => <svg {...iconProps} {...props}><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>;
+        const Phone = (props) => <svg {...iconProps} {...props}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 3.08 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>;
+        const Mail = (props) => <svg {...iconProps} {...props}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
+        const MapPin = (props) => <svg {...iconProps} {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="10" r="3"/></svg>;
+        const Instagram = (props) => <svg {...iconProps} {...props}><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.5" y1="6.5" y2="6.5"/></svg>;
+        const Facebook = (props) => <svg {...iconProps} {...props}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>;
+
+
+        // --- 1. Content and Localization Data ---
+
+        const content = {
+            de: {
+                appName: "Chiho",
+                nav: [
+                    { id: 'home', label: 'Startseite' },
+                    { id: 'menu', label: 'Speisekarte' },
+                    { id: 'about', label: 'Über Uns' },
+                    { id: 'contact', label: 'Kontakt' },
+                ],
+                home: {
+                    title: "Willkommen",
+                    heroText: "Entdecken Sie unsere handgefertigten Köstlichkeiten.",
+                },
+                menu: {
+                    title: "Unsere Speisekarte",
+                    items: [
+                        // 已更新为 menu1.jpg
+                        { name: "Inari-Sushi, Nori-Roll, Reis Bowl, Chiffon Torte", desc: "", imageUrl: "smenu1.jpg" },
+                        // 已更新为 menu2.jpg
+                        { name: "Classical Bubbletea, Fresh Ice Tea, Slush", desc: "", imageUrl: "smenu2.jpg" },
+                        // 已更新为 menu3.jpg
+                        { name: "Café, Tea, Others", desc: "", imageUrl: "smenu3.jpg" },
+                    ]
+                },
+                about: {
+                    title: "Unsere Geschichte",
+                    story: "Willkommen bei ChiHo Fusion Kitchen & Café – dein kleiner Ort zum Abschalten und Genießen. Bei uns findest du: Frische, cremige Smoothies; Erfrischendes, fein-eisiges Slush-Eis; Liebevoll zubereitete Tees und kleine Desserts. Mitten in Erlangen gelegen, ist ChiHo ein ruhiger Platz für eine kurze Pause im Alltag. Komm vorbei, entspann dich und gönn dir einen Moment, der dir guttut. ",
+                    storySubtitle: "Geschmack, der verbindet. Momente, die entspannen.",
+                },
+                contact: {
+                    title: "Sprechen Sie Uns An",
+                    address: "Pfarrstraße 2, 91054, Erlangen, Deutschland",
+                    phone: "+49 15510 167625",
+                    email: "chiho.rsj@gmail.com",
+                    socials: [
+                        { name: "Instagram", icon: Instagram, url: "https://www.instagram.com/chiho_erlangen/" },
+                        { name: "Facebook", icon: Facebook, url: "#" },
+                    ],
+                },
+                footer: {
+                    copyright: "© 2025 Chiho rsj. Alle Rechte vorbehalten.",
+                }
+            },
+            en: {
+                appName: "Chiho",
+                nav: [
+                    { id: 'home', label: 'Home' },
+                    { id: 'menu', label: 'Menu' },
+                    { id: 'about', label: 'About Us' },
+                    { id: 'contact', label: 'Contact' },
+                ],
+                home: {
+                    title: "Welcome",
+                    heroText: "Discover our handcrafted delicacies.",
+                },
+                menu: {
+                    title: "Our Menu",
+                    items: [
+                        // 已更新为 menu1.jpg
+                        { name: "Inari Sushi, Nori Roll, Rice Bowl, Chiffon Cake", desc: "", imageUrl: "smenu1.jpg" },
+                        // 已更新为 menu2.jpg
+                        { name: "Classical Bubble Tea, Fresh Iced Tea, Slush", desc: "", imageUrl: "smenu2.jpg" },
+                        // 已更新为 menu3.jpg
+                        { name: "Café, Tea, Others", desc: "", imageUrl: "smenu3.jpg" },
+                    ]
+                },
+                about: {
+                    title: "Our Story",
+                    story: "Welcome to ChiHo Fusion Kitchen & Café — a cozy spot where flavors feel gentle and time slows down a little. Here you’ll enjoy:Fresh, creamy Smoothies; Light, icy Slush drinks; Handcrafted teas and small desserts. Located on a quiet street in Erlangen, ChiHo is your place for a simple break — a moment to breathe, relax, and enjoy something that brightens your day. ",
+                    storySubtitle: "Flavors that connect. Moments that relax.",
+                },
+                contact: {
+                    title: "Get In Touch",
+                    address: "Pfarr street 2, 91054, Erlangen, Germany",
+                    phone: "+49 9131 9089903",
+                    email: "chiho.rsj@gmail.com",
+                    socials: [
+                        { name: "Instagram", icon: Instagram, url: "https://www.instagram.com/chiho_erlangen/" },
+                        { name: "Facebook", icon: Facebook, url: "#" },
+                    ],
+                },
+                footer: {
+                    copyright: "© 2025 Chiho rsj. All Rights Reserved.",
+                }
+            },
+            cn: {
+                appName: "Chiho 融*食记",
+                nav: [
+                    { id: 'home', label: '首页' },
+                    { id: 'menu', label: '菜单' },
+                    { id: 'about', label: '关于我们' },
+                    { id: 'contact', label: '联系' },
+                ],
+                home: {
+                    title: "欢迎光临",
+                    heroText: "探索我们的手工美味。",
+                },
+                menu: {
+                    title: "我们的菜单",
+                    items: [
+                        // 已更新为 menu1.jpg
+                        { name: "稻荷寿司,紫菜卷，饭类，小蛋糕", desc: "", imageUrl: "smenu1.jpg" },
+                        // 已更新为 menu2.jpg
+                        { name: "奶茶，水果茶，冰沙", desc: "", imageUrl: "smenu2.jpg" },
+                        // 已更新为 menu3.jpg
+                        { name: "咖啡，茶，其他", desc: "", imageUrl: "smenu3.jpg" },
+                    ]
+                },
+                about: {
+                    title: "我们的故事",
+                    story: "欢迎来到 ChiHo 融食记 —— 一个让味道与心情都轻松起来的小角落。在这里，你可以享受：清爽顺滑的 Smoothie 思慕雪；冰凉细腻的 Slush 冰沙；用心调制的茶饮与小甜品。我们位于埃尔朗根的一条安静街道，希望你能在忙碌中停一停，喝一杯喜欢的饮品，感受一点轻松、享受一份自在。",
+                    storySubtitle: "融在一起的美味，自在享受的时光。",
+                },
+                contact: {
+                    title: "联系我们",
+                    address: "牧师街 2 号, 埃尔朗根,德国",
+                    phone: "+49 9131 9089903",
+                    email: "chiho.rsj@gmail.com",
+                    socials: [
+                        { name: "Instagram", icon: Instagram, url: "https://www.instagram.com/chiho_erlangen/" },
+                        { name: "Facebook", icon: Facebook, url: "#" },
+                    ],
+                },
+                footer: {
+                    copyright: "© 2025 Chiho 融*食记。保留所有权利。",
+                }
+            }
+        };
+
+        const languages = ['de', 'cn', 'en'];
+
+        // Utility function to get translated text
+        const useLocalization = (lang) => {
+            return content[lang];
+        };
+
+        // --- 2. Components ---
+
+        // Component for Language Switcher Buttons
+        const LanguageSwitcher = ({ currentLang, setLang, isMobile }) => {
+            return (
+                <div className={`flex gap-2 font-mono ${isMobile ? 'flex-row' : 'text-sm'}`}>
+                    {languages.map((l) => (
+                        <button
+                            key={l}
+                            onClick={() => setLang(l)}
+                            className={`py-1 px-3 rounded-full transition duration-200 uppercase tracking-widest ${
+                                currentLang === l
+                                    ? 'bg-neutral-800 text-amber-100 shadow-md scale-105'
+                                    : 'text-neutral-600 hover:bg-neutral-200'
+                            }`}
+                        >
+                            {l}
+                        </button>
+                    ))}
+                </div>
+            );
+        };
+
+        // Component for Image Carousel (Hero Section)
+        const ImageCarousel = ({ currentLang }) => {
+            const images = [
+                "home1.jpg",
+                "home2.jpg",
+                "home3.jpg",
+                "home4.jpg",
+                "home5.jpg"
+            ];
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const { home } = useLocalization(currentLang);
+
+            const nextSlide = useCallback(() => {
+                setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+            }, [images.length]);
+
+            const prevSlide = useCallback(() => {
+                setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+            }, [images.length]);
+
+            // Auto-play feature
+            useEffect(() => {
+                const interval = setInterval(nextSlide, 5000); // Change image every 5 seconds
+                return () => clearInterval(interval);
+            }, [nextSlide]);
+
+            return (
+                <div className="relative w-full h-full overflow-hidden shadow-2xl rounded-xl">
+                    {/* Image Container */}
+                    <div
+                        className="flex transition-transform duration-700 ease-in-out h-full"
+                        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+                    >
+                        {images.map((src, index) => (
+                            <div key={index} className="w-full flex-shrink-0 h-full relative">
+                                <img
+                                    src={src}
+                                    alt={`Slide ${index + 1}`}
+                                    className="w-full h-full object-cover transition duration-300"
+                                    onError={(e) => { e.target.src = "https://placehold.co/1200x800/5e5e5e/ffffff?text=Image+Load+Error"; }}
+                                />
+                                {/* Text Overlay Area */}
+                                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center p-8">
+                                    {/* 将 bg-opacity-90 更改为 bg-opacity-70 以增加透明度 */}
+                                    <div className="text-center bg-white bg-opacity-30 p-6 sm:p-10 rounded-xl shadow-2xl max-w-lg">
+                                        <h1 className="text-3xl sm:text-5xl font-serif text-neutral-800 mb-2">{home.title}</h1>
+                                        <p className="text-lg sm:text-xl text-neutral-600">{home.heroText}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Navigation Arrows */}
+                    <button onClick={prevSlide} className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/50 hover:bg-white/80 rounded-full transition duration-300 shadow-lg z-10">
+                        <svg className="w-6 h-6 text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <button onClick={nextSlide} className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/50 hover:bg-white/80 rounded-full transition duration-300 shadow-lg z-10">
+                        <svg className="w-6 h-6 text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+
+                    {/* Dots Indicator */}
+                    <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2 z-10">
+                        {images.map((_, index) => (
+                            <button
+                                key={index}
+                                onClick={() => setCurrentIndex(index)}
+                                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                                    currentIndex === index ? 'bg-amber-500 w-5' : 'bg-white opacity-30'
+                                } shadow-md`}
+                                aria-label={`Go to slide ${index + 1}`}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+        
+        // Image Modal Component for full-screen viewing
+        const ImageModal = ({ imageUrl, onClose, currentLang }) => {
+            const T = useLocalization(currentLang);
+            const closeText = T.cn ? '点击此处关闭' : (currentLang === 'de' ? 'Hier klicken zum Schließen' : 'Click here to close');
+            
+            // Handle image load error
+            const handleError = (e) => { 
+                e.target.src = "https://placehold.co/1200x800/ff0000/ffffff?text=Image+Load+Error"; 
+            };
+
+            return (
+                // Modal Overlay - Click anywhere to close
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity duration-300 cursor-pointer"
+                    onClick={onClose}
+                >
+                    <div 
+                        className="relative max-w-full max-h-full w-auto h-auto"
+                        // Prevent modal closure when clicking on the image container itself
+                        onClick={(e) => e.stopPropagation()} 
+                    >
+                        <img
+                            src={imageUrl}
+                            alt={T.menu.title}
+                            // Image styling: max width/height of viewport, object-contain ensures aspect ratio is maintained
+                            className="max-w-[95vw] max-h-[95vh] object-contain rounded-lg shadow-2xl border-4 border-white transform transition-transform duration-500"
+                            onError={handleError}
+                        />
+                        {/* Closing hint */}
+                        <div className="absolute bottom-[-30px] left-1/2 transform -translate-x-1/2 text-white text-sm opacity-30 hidden sm:block">
+                           {closeText}
+                        </div>
+                    </div>
+                    {/* Close button in the corner */}
+                    <button 
+                        onClick={onClose}
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/30 hover:bg-white/50 text-white transition duration-200 shadow-lg"
+                        aria-label="Close Modal"
+                    >
+                        <X className="w-6 h-6" style={{ width: '24px', height: '24px' }} />
+                    </button>
+                </div>
+            );
+        };
+
+
+        // --- 3. Page Components ---
+
+        const HomePage = ({ currentLang }) => {
+            return (
+                // 首页部分使用 h-full 以占据整个可用空间 (由其父 div 容器设定高度)
+                <section className="h-full w-full p-0 flex items-center justify-center">
+                    <ImageCarousel currentLang={currentLang} />
+                </section>
+            );
+        };
+
+        const MenuPage = ({ currentLang }) => {
+            const { menu } = useLocalization(currentLang);
+            const [selectedImage, setSelectedImage] = useState(null); // State for the image URL to display in modal
+            
+            // Function to open the modal
+            const openModal = (imageUrl) => setSelectedImage(imageUrl.substring(1));
+
+            // Function to close the modal
+            const closeModal = () => setSelectedImage(null);
+
+            // Handle ESC key press to close modal
+            useEffect(() => {
+                const handleKeydown = (event) => {
+                    if (event.key === 'Escape') {
+                        closeModal();
+                    }
+                };
+                if (selectedImage) {
+                    document.addEventListener('keydown', handleKeydown);
+                }
+                return () => {
+                    document.removeEventListener('keydown', handleKeydown);
+                };
+            }, [selectedImage]);
+
+
+            return (
+                <section className="p-8 sm:p-16 lg:p-24 max-w-3xl mx-auto min-h-full">
+                    <h2 className="text-4xl font-serif text-center text-neutral-800 mb-12 border-b-2 border-amber-300 pb-2">
+                        {menu.title}
+                    </h2>
+                    <div className="space-y-12">
+                        {menu.items.map((item, index) => (
+                            <div 
+                                key={index} 
+                                // Make the whole div clickable and add hover effects
+                                className="bg-white rounded-xl shadow-xl hover:shadow-2xl transition duration-300 overflow-hidden group cursor-pointer"
+                                onClick={() => openModal(item.imageUrl)} // Click to open modal
+                            >
+                                <div className="relative overflow-hidden">
+                                    <img 
+                                        src={item.imageUrl} 
+                                        alt={item.name} 
+                                        className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                                        // 错误处理图片也更新为占位符
+                                        onError={(e) => { e.target.src = "https://placehold.co/800x600/b39a7b/ffffff?text=Item+Image"; }}
+                                    />
+                                    {/* Visual cue for clickability (放大镜效果) */}
+                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition duration-300 flex items-center justify-center">
+                                        <div className="p-3 rounded-full bg-white/80 text-neutral-800 opacity-0 group-hover:opacity-100 transition duration-300 shadow-md text-sm font-semibold">
+                                            {currentLang === 'cn' ? '点击查看大图' : currentLang === 'de' ? 'Zum Vergrößern klicken' : 'Click to zoom'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-6">
+                                    <h3 className="text-2xl font-serif text-neutral-900 mb-2">{item.name}</h3>
+                                    <p className="text-neutral-600 leading-relaxed">{item.desc}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Conditional Modal Rendering */}
+                    {selectedImage && (
+                        <ImageModal 
+                            imageUrl={selectedImage} 
+                            onClose={closeModal} 
+                            currentLang={currentLang}
+                        />
+                    )}
+                </section>
+            );
+        };
+
+        const AboutPage = ({ currentLang }) => {
+            const { about } = useLocalization(currentLang);
+            return (
+                <section className="p-8 sm:p-16 lg:p-24 max-w-4xl mx-auto min-h-full flex items-center">
+                    <div className="bg-white/80 p-8 sm:p-12 rounded-xl shadow-2xl">
+                        <h2 className="text-4xl font-serif text-center text-neutral-800 mb-8 border-b-2 border-amber-300 pb-2">
+                            {about.title}
+                        </h2>
+                        <h3 className="text-xl font-semibold text-center text-amber-700 mb-6 italic">
+                            {about.storySubtitle}
+                        </h3>
+                        <p className="text-lg text-neutral-700 leading-loose text-justify paragraph-style">
+                            {about.story}
+                        </p>
+                    </div>
+                </section>
+            );
+        };
+
+        const ContactPage = ({ currentLang }) => {
+            const { contact } = useLocalization(currentLang);
+
+            // Function to handle "Tap to Call" on mobile
+            const handlePhoneClick = () => {
+                // Use document.execCommand('copy') as a fallback/alternative to common mobile actions 
+                // in constrained iframe environments, though 'tel:' is standard.
+                window.location.href = `tel:${contact.phone.replace(/\s/g, '')}`;
+            };
+
+            const contactItems = [
+                { icon: MapPin, label: contact.address, type: 'text', action: null },
+                { icon: Phone, label: contact.phone, type: 'phone', action: handlePhoneClick },
+                { icon: Mail, label: contact.email, type: 'email', action: () => window.location.href = `mailto:${contact.email}` },
+            ];
+
+            return (
+                <section className="p-8 sm:p-16 lg:p-24 max-w-2xl mx-auto min-h-full flex items-center">
+                    <div className="w-full bg-white/80 p-8 sm:p-10 rounded-xl shadow-2xl">
+                        <h2 className="text-4xl font-serif text-center text-neutral-800 mb-12 border-b-2 border-amber-300 pb-2">
+                            {contact.title}
+                        </h2>
+                        <div className="space-y-6">
+                            {contactItems.map((item, index) => (
+                                <div key={index} className={`flex items-start p-4 border-l-4 border-amber-500 bg-neutral-50/50 rounded-lg ${item.type !== 'text' ? 'cursor-pointer hover:bg-neutral-100 transition duration-150' : ''}`}
+                                    onClick={item.action}
+                                >
+                                    <item.icon className="w-6 h-6 text-amber-700 flex-shrink-0 mt-1" />
+                                    <span className="ml-4 text-lg text-neutral-700 break-words flex-grow">
+                                        {item.label}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-10 pt-6 border-t border-neutral-300">
+                            <h3 className="text-xl font-serif text-neutral-800 mb-4">
+                                {currentLang === 'de' ? 'Folgen Sie Uns' : currentLang === 'cn' ? '关注我们' : 'Follow Us'}
+                            </h3>
+                            <div className="flex space-x-4 justify-center">
+                                {contact.socials.map((social, index) => (
+                                    <a key={index} href={social.url} target="_blank" rel="noopener noreferrer" 
+                                        className="p-3 bg-amber-500 text-white rounded-full hover:bg-amber-600 transition duration-200 shadow-md hover:shadow-lg"
+                                        aria-label={social.name}
+                                    >
+                                        <social.icon className="w-5 h-5" />
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            );
+        };
+
+        // --- 4. Main App Component ---
+
+        const App = () => {
+            // State management for navigation and language
+            const [currentPage, setCurrentPage] = useState('home');
+            const [isMenuOpen, setIsMenuOpen] = useState(false);
+            const [currentLang, setCurrentLang] = useState('de'); // Initial language is German (DE)
+
+            const T = useLocalization(currentLang);
+
+            // Utility to close menu on page change for mobile
+            const navigate = (pageId) => {
+                setCurrentPage(pageId);
+                // Auto-collapse on Selection
+                setIsMenuOpen(false); 
+            };
+
+            // Mapping page IDs to their components
+            const pageComponents = useMemo(() => ({
+                home: <HomePage currentLang={currentLang} />,
+                menu: <MenuPage currentLang={currentLang} />,
+                about: <AboutPage currentLang={currentLang} />,
+                contact: <ContactPage currentLang={currentLang} />,
+            }), [currentLang]);
+
+            // Current page component
+            const CurrentPageContent = pageComponents[currentPage] || pageComponents.home;
+
+            // --- Header Component ---
+            const Header = () => (
+                <header className="bg-white/90 backdrop-blur-sm shadow-lg fixed top-0 left-0 right-0 z-40">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16 sm:h-20">
+                        
+                        {/* 1. Mobile Hamburger Menu (Left) */}
+                        <div className="sm:hidden order-1">
+                            <button 
+                                onClick={() => setIsMenuOpen(true)}
+                                className="p-2 text-neutral-700 hover:text-amber-500 transition duration-150 rounded-lg hover:bg-neutral-100"
+                                aria-label="Open Menu"
+                            >
+                                <Menu className="w-6 h-6" />
+                            </button>
+                        </div>
+                        
+                        {/* 2. Logo (Center on Mobile, Left on Desktop) */}
+                        <div className="flex items-center order-2 sm:order-1 flex-grow sm:flex-grow-0 justify-center sm:justify-start">
+                            {/* 替换文本 Logo 为占位图片 - 尺寸放大 1.5 倍，URL 尺寸为 180x60 */}
+                            <img 
+                                src="LOGO1.png"
+                                alt={T.appName + " Logo Placeholder"}
+                                onClick={() => navigate('home')}
+                                className="h-20 sm:h-20 w-auto cursor-pointer rounded-md shadow-inner"
+                                onError={(e) => { e.target.src = "https://placehold.co/180x60/c8b39a/4a4a4a?text=Logo+Error"; }}
+                            />
+                        </div>
+
+                        {/* 3. Desktop Navigation (Right) */}
+                        {/* 导航栏现在包含了 LanguageSwitcher */}
+                        <nav className="hidden sm:flex space-x-2 lg:space-x-4 items-center order-2">
+                            {T.nav.map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => navigate(item.id)}
+                                    className={`px-3 py-2 text-base font-medium rounded-lg transition duration-200
+                                        ${currentPage === item.id
+                                            ? 'bg-amber-500 text-white shadow-md' // Active State
+                                            : 'text-neutral-700 hover:bg-neutral-100'
+                                        }`}
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
+                            {/* 桌面端语言切换器：位于导航菜单的最右侧 */}
+                            <LanguageSwitcher currentLang={currentLang} setLang={setCurrentLang} isMobile={false} />
+                        </nav>
+                        
+                        {/* Placeholder to balance mobile header on the right (if needed, otherwise logo is centered) */}
+                        <div className="sm:hidden w-10 order-3"></div> 
+                    </div>
+                </header>
+            );
+
+            // --- Mobile Side Panel Navigation ---
+            const MobileNavPanel = () => (
+                <div 
+                    className={`fixed inset-0 z-50 transform transition-transform duration-300 ease-in-out sm:hidden ${
+                        isMenuOpen ? 'translate-x-0' : '-translate-x-full'
+                    }`}
+                >
+                    {/* Overlay to close menu */}
+                    <div 
+                        className="absolute inset-0 bg-black opacity-40" 
+                        onClick={() => setIsMenuOpen(false)}
+                    ></div>
+
+                    {/* Panel */}
+                    <div className="relative w-72 max-w-[80vw] h-full bg-amber-50 shadow-2xl p-6 flex flex-col justify-between">
+                        <div>
+                            <div className="flex justify-between items-center mb-10 border-b pb-4">
+                                {/* 移动端面板内的 Logo 也使用占位图片 - 尺寸放大 1.5 倍，URL 尺寸为 180x60 */}
+                                <img 
+                                    src="https://placehold.co/180x60/d5d2c9/4a4a4a?text=LOGO"
+                                    alt={T.appName + " Logo Placeholder"}
+                                    className="h-12 w-auto rounded-md shadow-inner"
+                                    onError={(e) => { e.target.src = "https://placehold.co/180x60/c8b39a/4a4a4a?text=Logo+Error"; }}
+                                />
+                                <button 
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="p-2 text-neutral-700 hover:text-amber-500 transition duration-150 rounded-full hover:bg-amber-100"
+                                    aria-label="Close Menu"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+                            
+                            {/* Navigation Links */}
+                            <nav className="space-y-3">
+                                {T.nav.map((item) => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => navigate(item.id)}
+                                        className={`w-full text-left px-4 py-3 rounded-xl text-lg transition duration-200
+                                            ${currentPage === item.id
+                                                ? 'bg-amber-500 text-white shadow-lg'
+                                                : 'text-neutral-700 hover:bg-amber-100'
+                                            }`}
+                                    >
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </nav>
+                        </div>
+
+                        {/* Language Switcher integrated into the panel */}
+                        <div className="mt-auto pt-6 border-t border-amber-200">
+                            <div className="text-neutral-600 mb-3 flex items-center">
+                                <Globe className="w-5 h-5 mr-2" />
+                                {currentLang === 'de' ? 'Sprache' : currentLang === 'cn' ? '语言' : 'Language'}
+                            </div>
+                            <LanguageSwitcher currentLang={currentLang} setLang={setCurrentLang} isMobile={true} />
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // --- Footer Component ---
+            const Footer = () => (
+                // 注意：mt-8 计入了 Hero 区域的总体高度计算
+                <footer className="w-full bg-neutral-900 text-neutral-300 py-4 shadow-inner mt-8"> 
+                    <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col sm:flex-row justify-between items-center text-sm">
+                        <p className="order-2 sm:order-1 mt-2 sm:mt-0 text-center sm:text-left">{T.footer.copyright}</p>
+                        <div className="flex space-x-4 order-1 sm:order-2">
+                            {/* Social Media Icon Placeholders (Right side of Footer) */}
+                            {T.contact.socials.map((social, index) => (
+                                 <a key={index} href={social.url} target="_blank" rel="noopener noreferrer" 
+                                    className="text-neutral-400 hover:text-amber-500 transition duration-200"
+                                    aria-label={social.name}
+                                >
+                                    <social.icon className="w-5 h-5" />
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                </footer>
+            );
+
+            return (
+                <div className="min-h-screen flex flex-col" style={{ 
+                    // 浅米色纸纹理背景 (Textured Beige Paper Background) 模拟
+
+            	//	backgroundImage: url('bg.png');
+            	//	background-repeat: repeat;
+		
+                     backgroundColor: '#f5f5dc', // Base beige color
+                     backgroundImage: "url('bg.png')",
+					 backgroundRepeat: "repeat",
+					 backgroundSize: "auto",
+
+					 //backgroundImage: `radial-gradient(circle at 100% 100%, #ffffff30 1px, transparent 1px),
+                     //                 radial-gradient(circle at 0% 0%, #00000010 1px, transparent 1px),
+                     //                 repeating-linear-gradient(135deg, #f7f7e9 0, #f7f7e9 1px, #f5f5dc 1px, #f5f5dc 10px)`
+                }}>
+                    <Header />
+                    <MobileNavPanel />
+
+                    {/* Main Content Area (pushes content below fixed header) */}
+                    <main className="flex-grow pt-16 sm:pt-20">
+                        {/* 根据用户要求调整 Hero 区域 (currentPage === 'home') 的高度：
+                            Hero Height = 100vh - 64px (mobile header) / 80px (desktop header) - 88px (footer block)
+                        */}
+                        <div className={`
+                            ${currentPage === 'home' 
+                                ? 'h-[calc(100vh-152px)] sm:h-[calc(100vh-168px)] p-0' // 首页精确高度
+                                : 'min-h-[calc(100vh-64px)] sm:min-h-[calc(100vh-80px)] pb-16' // 其他页面最小高度
+                            }
+                        `}>
+                            {CurrentPageContent}
+                        </div>
+                    </main>
+
+                    <Footer />
+                </div>
+            );
+        };
+
+        root.render(<App />);
+    </script>
+</body>
+</html>
